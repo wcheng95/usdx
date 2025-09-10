@@ -13,8 +13,8 @@
 
 #define DIAG             1   // Hardware diagnostics on startup (only disable when your rig is working)
 #define KEYER            1   // CW keyer
-#define CAT              1   // CAT-interface
-#define F_XTAL    27000030   // 27MHz SI5351 crystal
+//#define CAT              1   // CAT-interface
+#define F_XTAL    25000000   // 27MHz SI5351 crystal
 //#define F_XTAL  25004000   // 25MHz SI5351 crystal  (enable for WB2CBA-uSDX, SI5351 break-out board or uSDXDuO)
 //#define F_XTAL  25000000   // 25MHz SI5351 crystal  (enable for 25MHz TCXO)
 //#define SWAP_ROTARY    1   // Swap rotary direction (enable for WB2CBA-uSDX)
@@ -38,16 +38,16 @@
 //#define CAT_STREAMING  1   // Extended CAT support: audio streaming over CAT, once enabled and triggered with CAT cmd, samplerate 7812Hz, 8-bit unsigned audio is sent over UART. The ";" is omited in the data-stream, and only sent to indicate the beginning and end of a CAT cmd.
 #define CW_DECODER       1   // CW decoder
 #define TX_ENABLE        1   // Disable this for RX only (no transmit), e.g. to support uSDX for kids idea: https://groups.io/g/ucx/topic/81030243#6276
-#define KEY_CLICK        1   // Reduce key clicks by envelope shaping
+ #define KEY_CLICK        1   // Reduce key clicks by envelope shaping
 #define SEMI_QSK         1   // Just after keying the transmitter, keeps the RX muted for a short amount of time in the anticipation for continued keying
 #define RIT_ENABLE       1   // Receive-In-Transit alternates the receiving frequency with an user-defined offset to compensate for any necessary tuning needed on receive
 #define VOX_ENABLE       1   // Voice-On-Xmit which is switching the transceiver into transmit as soon audio is detected (above noise gate level)
 //#define MOX_ENABLE     1   // Monitor-On-Xmit which is audio monitoring on speaker during transmit
-//#define FAST_AGC       1   // Adds fast AGC option (good for CW)
-//#define VSS_METER      1   // Supports Vss measurement (as s-meter option), requires resistor of 1M between 12V and pin 26 (PC3)
+#define FAST_AGC       1   // Adds fast AGC option (good for CW)
+#define VSS_METER      1   // Supports Vss measurement (as s-meter option), requires resistor of 1M between 12V and pin 26 (PC3)
 
-//#define SWR_METER      1   // Supports SWR meter with bridge on A6/A7 (LQPF ATMEGA328P) by Alain, K1FM, see: https://groups.io/g/ucx/message/6262 and https://groups.io/g/ucx/message/6361
-#define PWR_CALIBRATION_CONSTANT 67 // if SWR_METER is defined, this is the initial calibration value for the original code of the power meter. 67 is ok for the SWR bridge ripped from the trusdx schematics (ADC6 connected to forward power, ADC7 connected to reflected power) --sq5bpf
+#define SWR_METER      1   // Supports SWR meter with bridge on A6/A7 (LQPF ATMEGA328P) by Alain, K1FM, see: https://groups.io/g/ucx/message/6262 and https://groups.io/g/ucx/message/6361
+#define PWR_CALIBRATION_CONSTANT 82 // if SWR_METER is defined, this is the initial calibration value for the original code of the power meter. 67 is ok for the SWR bridge ripped from the trusdx schematics (ADC6 connected to forward power, ADC7 connected to reflected power) --sq5bpf
 
 //#define INA219_POWER_METER     1   // PA voltage/current/power monitoring using an addon INA219 board (adafruit etc). Also shows PA efficiency. Works only if SWR_METER is defined. Measurements are done only in CW --sq5bpf
 #define CURRENT_SHUNT_CALIBRATION_CONSTANT 4010 // default calibration constant for my INA219 board (same as Adafruit board but without the logo). This should be 4096 for a 0.1ohm resistor and the chosen configuration, so either the resistor is a bit off, or my meter is off --sq5bpf
@@ -58,7 +58,7 @@
 //#define CW_FREQS_QRP   1   // Defaults to CW QRP   frequencies when changing bands
 //#define CW_FREQS_FISTS 1   // Defaults to CW FISTS frequencies when changing bands
 
-#define CW_MESSAGE       1   // Transmits pre-defined CW messages on-demand (left-click menu item 4.2)
+// #define CW_MESSAGE       1   // Transmits pre-defined CW messages on-demand (left-click menu item 4.2)
 //#define CW_MESSAGE_EXT 1   // Additional CW messages
 
 //put your call and name here, it will be used to generate the predefined messages
