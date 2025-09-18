@@ -33,7 +33,7 @@
 #define SDA     18        //PC4    (pin 27)
 #define SCL     19        //PC5    (pin 28)
 //#define NTX   11        //PB3    (pin 17)
-#define PTX   11        //PB3    (pin 17)/
+//#define PTX   11        //PB3    (pin 17)
 
 #ifdef SWAP_ROTARY
 #undef ROT_A
@@ -1977,13 +1977,12 @@ inline int16_t ssb(int16_t in)
   ac = ac + z1;        // lpf
   z1 = (in - (8) * z1) / (8 + 1); // lpf
 
-  // --- ДОБАВЛЕННЫЙ КОД: МЯГКИЙ ОГРАНИЧИТЕЛЬ ---
+  // smooth clipping limiter 
   if (ac > 250) {
-    ac = 250 + (ac - 250) / 2; // Плавное сжатие пиков выше 200
+    ac = 250 + (ac - 250) / 2; 
   } else if (ac < -250) {
-    ac = -250 - (-250 - ac) / 2; // Плавное сжатие пиков ниже -200
+    ac = -250 - (-250 - ac) / 2;
   }
-  // --- КОНЕЦ ДОБАВЛЕННОГО КОДА ---
 
   dc = (ac + (2) * dc) / (2 + 1);
   v[15] = (ac - dc);
@@ -2024,12 +2023,6 @@ inline int16_t ssb(int16_t in)
   int16_t dp = phase - prev_phase;  // phase difference and restriction
   //dp = (amp) ? dp : 0;  // dp = 0 when amp = 0
   prev_phase = phase;
-
-  // if(mode == USB) {
-  //   dp += 8;//best for USB +2 on 40m
-  // } else {
-  //   dp -= 4;//best for LSB -1 on 40m
-  // }
 
   if(dp < 0) dp = dp + _UA; // make negative phase shifts positive: prevents negative frequencies and will reduce spurs on other sideband
 #ifdef QUAD
@@ -2599,24 +2592,17 @@ inline int16_t slow_dsp(int16_t ac)
   if(!(absavg256cnt--)){ _absavg256 = absavg256; absavg256 = 0; } else absavg256 += abs(ac);
 
   if(mode == AM) {
-    // Истинная AM демодуляция: огибающая = sqrt(I^2 + Q^2)
-    // Используем приближение magn, но применяем его к уже обработанным I/Q   
     ac = magn(i, q);
-    // Мягкое удаление DC-составляющей с большим коэффициентом сглаживания
     static int32_t dc_avg = 0;
-    dc_avg = (dc_avg * 63 + ac) / 64; // Альфа = 1/32 для медленного усреднения
+    dc_avg = (dc_avg * 63 + ac) / 64;
     ac = ac - dc_avg;
   } else if(mode == FM){
-    // Квадратурный FM-демодулятор (стабильная версия)
     static int16_t prev_i = 0;
     static int16_t prev_q = 0;
     int32_t product = (int32_t)i * prev_q - (int32_t)q * prev_i;
-    
-    // Нормализация по огибающей для стабильности
     int32_t magnitude_sq = (int32_t)i * i + (int32_t)q * q;
-    if (magnitude_sq > 1000) { // Порог, чтобы избежать деления на очень маленькое число
-      // **Ключевое исправление: уменьшаем коэффициент усиления**
-      ac = (product << 4) / (magnitude_sq >> 3); // Мягкое масштабирование
+    if (magnitude_sq > 1000) { 
+      ac = (product << 4) / (magnitude_sq >> 3);
     } else {
       ac = 0;
     }
@@ -2624,13 +2610,9 @@ inline int16_t slow_dsp(int16_t ac)
     prev_i = i;
     prev_q = q;
 
-    // ФНЧ с регулируемой частотой среза
     static int16_t fm_lpf = 0;
-    fm_lpf = (fm_lpf * 3 + ac) / 4; // Альфа = 1/4 (~3-4 кГц)
+    fm_lpf = (fm_lpf * 3 + ac) / 4; // alpha = 1/4 (~3-4 кГц)
     ac = fm_lpf;
-
-    // **Ключевое исправление: сильное ослабление на выходе**
-  //  ac = ac >> 2; // Уменьшаем усиление в 16 раз
   }  // needs: p.12 https://www.veron.nl/wp-content/uploads/2014/01/FmDemodulator.pdf
   else { ; }  // USB, LSB, CW
 
