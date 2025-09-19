@@ -1973,11 +1973,19 @@ inline int16_t ssb(int16_t in)
   dc = (ac + (7) * dc) / (7 + 1);  // hpf: slow average
   v[15] = (ac - dc) / 2;           // hpf (dc decoupling)  (-6dB gain to compensate for DC-noise)
 #else
-  int16_t ac = in * 2;             //   6dB gain (justified since lpf/hpf is losing -3dB)
-  ac = ac + z1;                    // lpf
-  z1 = (in - (2) * z1) / (2 + 1);  // lpf: notch at Fs/2 (alias rejecting)
-  dc = (ac + (2) * dc) / (2 + 1);  // hpf: slow average
-  v[15] = (ac - dc);               // hpf (dc decoupling)
+  int16_t ac = in * 2; //   6dB gain (justified since lpf/hpf is losing -3dB)
+  ac = ac + z1;        // lpf
+  z1 = (in - (8) * z1) / (8 + 1); // lpf
+
+  // smooth clipping limiter 
+  if (ac > 250) {
+    ac = 250 + (ac - 250) / 2; 
+  } else if (ac < -250) {
+    ac = -250 - (-250 - ac) / 2;
+  }
+
+  dc = (ac + (2) * dc) / (2 + 1);
+  v[15] = (ac - dc);
 #endif //DIG_MODE
   i = v[7] * 2;  // 6dB gain for i, q  (to prevent quanitization issues in hilbert transformer and phase calculation, corrected for magnitude calc)
   q = ((v[0] - v[14]) * 2 + (v[2] - v[12]) * 8 + (v[4] - v[10]) * 21 + (v[6] - v[8]) * 16) / 64 + (v[6] - v[8]); // Hilbert transform, 40dB side-band rejection in 400..1900Hz (@4kSPS) when used in image-rejection scenario; (Hilbert transform require 5 additional bits)
@@ -2585,21 +2593,26 @@ inline int16_t slow_dsp(int16_t ac)
 
   if(mode == AM) {
     ac = magn(i, q);
-    { static int16_t dc;   // DC decoupling
-      dc += (ac - dc) / 2;
-      ac = ac - dc; }
+    static int32_t dc_avg = 0;
+    dc_avg = (dc_avg * 63 + ac) / 64;
+    ac = ac - dc_avg;
   } else if(mode == FM){
-    static int16_t zi;
-    ac = ((ac + i) * zi);  // -qh = ac + i
-    zi =i;
-    /*int16_t z0 = _arctan3(q, i);
-    static int16_t z1;
-    ac = z0 - z1; // Differentiator
-    z1 = z0;*/
-    /*static int16_t _q;
-    _q = (_q + q) / 2;
-    ac = i * _q;  // quadrature detector */
-    //ac = ((q > 0) == !(i > 0)) ? 128 : -128; // XOR I/Q zero-cross detector
+    static int16_t prev_i = 0;
+    static int16_t prev_q = 0;
+    int32_t product = (int32_t)i * prev_q - (int32_t)q * prev_i;
+    int32_t magnitude_sq = (int32_t)i * i + (int32_t)q * q;
+    if (magnitude_sq > 1000) { 
+      ac = (product << 4) / (magnitude_sq >> 3);
+    } else {
+      ac = 0;
+    }
+
+    prev_i = i;
+    prev_q = q;
+
+    static int16_t fm_lpf = 0;
+    fm_lpf = (fm_lpf * 3 + ac) / 4; // alpha = 1/4 (~3-4 кГц)
+    ac = fm_lpf;
   }  // needs: p.12 https://www.veron.nl/wp-content/uploads/2014/01/FmDemodulator.pdf
   else { ; }  // USB, LSB, CW
 
