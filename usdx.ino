@@ -162,6 +162,21 @@ uint8_t _digitalRead(uint8_t pin){  // reads pin or (via CAT) artificially overr
   uint8_t inv = 0;
 #endif
 
+#ifdef THREEBUTTONROT
+// --- Timing values ---
+const unsigned long debounceDelay = 50;   // debounce time (ms)
+const unsigned long initialDelay  = 400;  // delay before repeating starts
+const unsigned long repeatDelay   = 150;  // repeat rate (ms)
+
+// --- Internal state ---
+unsigned int buttonState = 3;        // current state (using INPUT_PULLUP)
+unsigned int lastButtonState = 3;    // previous state
+
+unsigned long lastDebounceTime = 0;
+unsigned long lastRepeatTime = 0;
+bool repeating = false;
+#endif
+
 //#ifdef KEYER
 // Iambic Morse Code Keyer Sketch, Contribution by Uli, DL2DBG. Copyright (c) 2009 Steven T. Elliott Source: http://openqrp.org/?p=343,  Trimmed by Bill Bishop - wrb[at]wrbishop.com.  This library is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option) any later version. This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details: Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA.
 
@@ -1125,6 +1140,59 @@ ISR(PCINT2_vect){  // Interrupt on rotary encoder turn
   //PCMSK2 |= (1 << PCINT22) | (1 << PCINT23);  // allow ROT_A, ROT_B interrupts
   //interrupts();
 }
+
+#ifdef THREEBUTTONROT
+void encoder_setup()
+{
+	pinMode(ROT_A, INPUT_PULLUP);
+	pinMode(ROT_B, INPUT_PULLUP);
+}
+void CheckRotButton() {
+  unsigned int reading = digitalRead(ROT_B) << 1 | digitalRead(ROT_A);
+
+  // --- Debounce ---
+  if (reading != lastButtonState) {
+    lastDebounceTime = millis();
+  }
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != buttonState) {
+      buttonState = reading;
+      if (buttonState == 2 | buttonState == 1 ) {
+        // Button just pressed
+        if (buttonState == 2 ) encoder_val++;
+        else encoder_val--;
+        //Serial.print("Pressed: ");
+        //Serial.println(encoder_val);
+        lastRepeatTime = millis();
+        repeating = false;
+      } 
+      else {
+        // Button released
+        repeating = false;
+      }
+    }
+  }
+
+  // --- Handle repeating ---
+  if (buttonState == 2 | buttonState == 1) {  // still held
+    unsigned long now = millis();
+    if (!repeating && (now - lastRepeatTime > initialDelay)) {
+      repeating = true;
+      lastRepeatTime = now;
+    }
+
+    if (repeating && (now - lastRepeatTime > repeatDelay)) {
+      if (buttonState == 2 ) encoder_val++;
+      else encoder_val--;
+      //Serial.print("Repeat: ");
+      //Serial.println(encoder_val);
+      lastRepeatTime = now;
+    }
+  }
+
+  lastButtonState = reading;
+}
+#else
 void encoder_setup()
 {
   pinMode(ROT_A, INPUT_PULLUP);
@@ -1134,6 +1202,8 @@ void encoder_setup()
   last_state = (_digitalRead(ROT_B) << 1) | _digitalRead(ROT_A);
   interrupts();
 }
+#endif
+
 /*
 class Encoder {
 public:
@@ -5065,6 +5135,11 @@ static int32_t _step = 0;
 
 void loop()
 {
+
+#ifdef THREEBUTTONROT
+CheckRotButton();
+#endif
+
 #ifdef VOX_ENABLE
   if((vox) && ((mode == LSB) || (mode == USB))){  // If VOX enabled (and in LSB/USB mode), then take mic samples and feed ssb processing function, to derive amplitude, and potentially detect cross vox_threshold to detect a TX or RX event: this is expressed in tx variable
     if(!vox_tx){ // VOX not active
